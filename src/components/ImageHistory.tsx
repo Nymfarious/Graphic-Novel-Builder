@@ -35,6 +35,7 @@ export const ImageHistory: React.FC<ImageHistoryProps> = ({
         image.status === statusFilter;
       
       const matchesCharacter = characterFilter === 'all' || 
+        (characterFilter === 'none' && !image.characterId) ||
         image.characterId === characterFilter;
 
       return matchesSearch && matchesStatus && matchesCharacter;
@@ -192,7 +193,7 @@ export const ImageHistory: React.FC<ImageHistoryProps> = ({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Characters</SelectItem>
-                <SelectItem value="">No Character</SelectItem>
+                <SelectItem value="none">No Character</SelectItem>
                 {characters.map(character => (
                   <SelectItem key={character.id} value={character.id}>
                     {character.name}
