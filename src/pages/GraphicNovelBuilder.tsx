@@ -565,11 +565,12 @@ const GraphicNovelBuilder = () => {
       try {
         const data = JSON.parse(saved);
         setPages(data.pages || [DEFAULT_PRESET]);
-        setGlobalSettings(data.settings || {
+        setGlobalSettings({
           gutter: 8,
           background: '#ffffff',
           pageSize: 'A4' as keyof typeof PAGE_SIZES,
-          orientation: 'portrait' as 'portrait' | 'landscape'
+          orientation: 'portrait' as 'portrait' | 'landscape',
+          ...data.settings
         });
         setCharacters(data.characters || []);
         setGeneratedImages(data.generatedImages || []);
@@ -609,7 +610,9 @@ const GraphicNovelBuilder = () => {
   const { gutter, pageSize, orientation } = globalSettings;
   const pageGap = 20;
   
-  const baseSize = PAGE_SIZES[pageSize];
+  // Safety check to ensure pageSize exists in PAGE_SIZES
+  const safePageSize = pageSize && PAGE_SIZES[pageSize] ? pageSize : 'A4';
+  const baseSize = PAGE_SIZES[safePageSize];
   const pageWidth = orientation === 'landscape' ? baseSize.height : baseSize.width;
   const pageHeight = orientation === 'landscape' ? baseSize.width : baseSize.height;
 
