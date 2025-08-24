@@ -63,7 +63,7 @@ serve(async (req) => {
     const input: any = {
       prompt: body.prompt,
       aspect_ratio: body.aspect_ratio || "1:1",
-      output_format: body.output_format || "webp",
+      output_format: body.output_format || "png",
       safety_tolerance: body.safety_tolerance ?? 2,
       prompt_upsampling: body.prompt_upsampling ?? true,
     }
