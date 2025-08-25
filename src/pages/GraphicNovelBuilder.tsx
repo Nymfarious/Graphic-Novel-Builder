@@ -17,6 +17,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { CharacterManager } from '@/components/CharacterManager';
 import { Gallery } from '@/components/Gallery';
 import { ImageHistory } from '@/components/ImageHistory';
+import { ImagePickerModal } from '@/components/ImagePickerModal';
+import { SpeechBubble, SpeechBubbleInspector } from '@/components/SpeechBubble';
+import { ProjectManager } from '@/components/ProjectManager';
+import { DraggableResizer } from '@/components/DraggableResizer';
+import { EnhancedBatchGenerator } from '@/components/EnhancedBatchGenerator';
 import { Character, GeneratedImage, GenerationJob } from '@/types';
 import { ReplicateService } from '@/services/replicate';
 import { 
