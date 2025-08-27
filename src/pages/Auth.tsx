@@ -74,9 +74,11 @@ const Auth = () => {
         
         let errorMessage = error.message;
         if (error.message.includes('Invalid login credentials')) {
-          errorMessage = 'Invalid email or password. Please check your credentials and try again.';
+          errorMessage = 'Please check your email and click the verification link, then try signing in again.';
         } else if (error.message.includes('Email not confirmed')) {
           errorMessage = 'Please check your email and click the confirmation link before signing in.';
+        } else if (error.message.includes('Too many requests')) {
+          errorMessage = 'Too many login attempts. Please wait a moment and try again.';
         }
         
         toast({
@@ -150,11 +152,10 @@ const Auth = () => {
       } else if (data.user) {
         toast({
           title: "Account Created!",
-          description: "Please check your email for verification, then sign in.",
+          description: "Please check your email for the verification link, then return here to sign in.",
         });
         setActiveTab('signin');
-        // Clear form
-        setEmail('');
+        // Clear form but keep email for easier sign in
         setPassword('');
         setDisplayName('');
       }
