@@ -73,6 +73,28 @@ interface EnhancedLeafInspectorProps {
   isGenerating: boolean;
   manualImageUrl: string;
   setManualImageUrl: (url: string) => void;
+  negativePrompt: string;
+  setNegativePrompt: (prompt: string) => void;
+  referenceImageUrl: string;
+  setReferenceImageUrl: (url: string) => void;
+  referenceImages: string[];
+  setReferenceImages: (images: string[]) => void;
+  aspectRatio: string;
+  setAspectRatio: (ratio: string) => void;
+  seed: number | null;
+  setSeed: (seed: number | null) => void;
+  guidanceScale: number;
+  setGuidanceScale: (scale: number) => void;
+  inferenceSteps: number;
+  setInferenceSteps: (steps: number) => void;
+  imageStrength: number;
+  setImageStrength: (strength: number) => void;
+  outputFormat: string;
+  setOutputFormat: (format: string) => void;
+  safetyTolerance: number;
+  setSafetyTolerance: (tolerance: number) => void;
+  promptUpsampling: boolean;
+  setPromptUpsampling: (upsampling: boolean) => void;
 }
 
 export const EnhancedLeafInspector: React.FC<EnhancedLeafInspectorProps> = ({
@@ -85,7 +107,30 @@ export const EnhancedLeafInspector: React.FC<EnhancedLeafInspectorProps> = ({
   onGenerateImage,
   isGenerating,
   manualImageUrl,
-  setManualImageUrl
+  setManualImageUrl,
+  // Accept the additional props but don't use them in this simplified version
+  negativePrompt,
+  setNegativePrompt,
+  referenceImageUrl,
+  setReferenceImageUrl,
+  referenceImages,
+  setReferenceImages,
+  aspectRatio,
+  setAspectRatio,
+  seed,
+  setSeed,
+  guidanceScale,
+  setGuidanceScale,
+  inferenceSteps,
+  setInferenceSteps,
+  imageStrength,
+  setImageStrength,
+  outputFormat,
+  setOutputFormat,
+  safetyTolerance,
+  setSafetyTolerance,
+  promptUpsampling,
+  setPromptUpsampling
 }) => {
   return (
     <div className="space-y-4">
