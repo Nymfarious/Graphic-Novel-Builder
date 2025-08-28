@@ -24,7 +24,8 @@ import { CloudProjectManager } from '@/components/CloudProjectManager';
 import UserMenu from '@/components/UserMenu';
 import { DraggableResizer } from '@/components/DraggableResizer';
 import { EnhancedBatchGenerator } from '@/components/EnhancedBatchGenerator';
-import { Character, GeneratedImage, GenerationJob } from '@/types';
+import { SavePageModal } from '@/components/SavePageModal';
+import { Character, GeneratedImage, GenerationJob, SavedPage } from '@/types';
 import { ReplicateService } from '@/services/replicate';
 import { 
   LayoutGrid, 
@@ -65,10 +66,20 @@ interface LeafNode {
     fontSize: number;
     color: string;
     fontWeight: string;
-    textAlign: "left" | "center" | "right";
+    textAlign: "left" | "center" | "right" | "justify";
     fontFamily: string;
     lineHeight: number;
     letterSpacing: number;
+    italic: boolean;
+    underline: boolean;
+    strikethrough: boolean;
+    textShadow: string;
+    textTransform: "none" | "uppercase" | "lowercase" | "capitalize";
+    wordSpacing: number;
+    textBackground: string;
+    textBackgroundOpacity: number;
+    fontWeight100: number;
+    textGradient: string;
   };
   imageProps: {
     url: string;
@@ -116,6 +127,16 @@ const DEFAULT_LEAF = (): LeafNode => ({
     fontFamily: "Arial, sans-serif",
     lineHeight: 1.4,
     letterSpacing: 0,
+    italic: false,
+    underline: false,
+    strikethrough: false,
+    textShadow: "none",
+    textTransform: "none",
+    wordSpacing: 0,
+    textBackground: "transparent",
+    textBackgroundOpacity: 0,
+    fontWeight100: 400,
+    textGradient: "",
   },
   imageProps: {
     url: "",
@@ -517,8 +538,18 @@ const GraphicNovelBuilder = () => {
   const [guidanceScale, setGuidanceScale] = useState<number>(7.5);
   const [inferenceSteps, setInferenceSteps] = useState<number>(4);
   const [imageStrength, setImageStrength] = useState<number>(0.8);
+  
+  // Text generation settings
+  const [textGenerationStyle, setTextGenerationStyle] = useState<'dialogue' | 'narration' | 'description' | 'action'>('narration');
+  const [textGenerationTone, setTextGenerationTone] = useState<'dramatic' | 'humorous' | 'mysterious' | 'romantic' | 'dark'>('dramatic');
+  const [textGenerationLength, setTextGenerationLength] = useState<'short' | 'medium' | 'long'>('medium');
+  const [selectedCharacters, setSelectedCharacters] = useState<string[]>([]);
+  
+  // Saved pages
+  const [savedPages, setSavedPages] = useState<SavedPage[]>([]);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const pageRef = useRef<HTMLDivElement>(null);
 
   // Helper function to create composite image from multiple references
   const createCompositeImage = async (images: string[]): Promise<string> => {
@@ -618,6 +649,7 @@ const GraphicNovelBuilder = () => {
         });
         setCharacters(data.characters || []);
         setGeneratedImages(data.generatedImages || []);
+        setSavedPages(data.savedPages || []);
       } catch (error) {
         console.error('Error loading saved data:', error);
       }
@@ -630,7 +662,8 @@ const GraphicNovelBuilder = () => {
       pages,
       settings: globalSettings,
       characters,
-      generatedImages
+      generatedImages,
+      savedPages
     };
     localStorage.setItem('graphic-novel-builder', JSON.stringify(data));
   }, [pages, globalSettings, characters, generatedImages]);
@@ -664,16 +697,56 @@ const GraphicNovelBuilder = () => {
   const pageBg = globalSettings.background;
   const pageRadius = 8;
 
-  const onGenerateText = () => {
+  const onGenerateText = async () => {
     if (!selectedNode || selectedNode.kind !== "leaf") return;
-    const randomPrompt = storyPrompts[Math.floor(Math.random() * storyPrompts.length)];
-    updatePage(selectedPage, prev => updateNode(prev, selectedNode.id, n => n.kind !== "leaf" ? n : ({
-      ...n,
-      textProps: {
-        ...n.textProps,
-        text: appendGeneratedLine(n.textProps.text || "", randomPrompt)
+    
+    try {
+      toast.info("Generating story text...");
+      
+      const { data, error } = await supabase.functions.invoke('generate-story-text', {
+        body: {
+          prompt: aiPrompt || "Continue the story",
+          context: selectedNode.textProps.text,
+          style: 'narration',
+          tone: 'dramatic',
+          length: 'medium',
+          characters: selectedCharacters.length > 0 ? selectedCharacters.map(id => characters.find(c => c.id === id)?.name).filter(Boolean) : undefined
+        }
+      });
+
+      if (error) {
+        throw new Error(error.message || "Failed to generate story text");
       }
-    })) as SplitNode);
+
+      if (!data || !data.text) {
+        throw new Error("No text received from generation service");
+      }
+
+      updatePage(selectedPage, prev => updateNode(prev, selectedNode.id, n => n.kind !== "leaf" ? n : ({
+        ...n,
+        textProps: {
+          ...n.textProps,
+          text: appendGeneratedLine(n.textProps.text || "", data.text.trim())
+        }
+      })) as SplitNode);
+      
+      toast.success("Story text generated successfully!");
+      
+    } catch (error) {
+      console.error('Text generation error:', error);
+      const message = error instanceof Error ? error.message : "Failed to generate text";
+      toast.error(`Generation failed: ${message}`);
+      
+      // Fallback to random prompt
+      const randomPrompt = storyPrompts[Math.floor(Math.random() * storyPrompts.length)];
+      updatePage(selectedPage, prev => updateNode(prev, selectedNode.id, n => n.kind !== "leaf" ? n : ({
+        ...n,
+        textProps: {
+          ...n.textProps,
+          text: appendGeneratedLine(n.textProps.text || "", randomPrompt)
+        }
+      })) as SplitNode);
+    }
   };
 
   // Enhanced AI image generation with character support
@@ -845,6 +918,19 @@ const GraphicNovelBuilder = () => {
     setSelectedId("");
   };
 
+  const handleSavePage = (pageInfo: { title: string; description: string; imageUrl: string; pageData: any }) => {
+    const newSavedPage: SavedPage = {
+      id: crypto.randomUUID(),
+      title: pageInfo.title,
+      description: pageInfo.description,
+      imageUrl: pageInfo.imageUrl,
+      pageData: pageInfo.pageData,
+      createdAt: new Date()
+    };
+    
+    setSavedPages(prev => [newSavedPage, ...prev]);
+  };
+
   return (
     <DndProvider backend={HTML5Backend}>
       <div className="h-screen flex bg-background">
@@ -887,6 +973,7 @@ const GraphicNovelBuilder = () => {
                   if (data.zoom !== undefined) setZoom(data.zoom);
                   if (data.characters) setCharacters(data.characters);
                   if (data.generatedImages) setGeneratedImages(data.generatedImages);
+                  if (data.savedPages) setSavedPages(data.savedPages);
                 }}
                 onSaveProject={() => {
                   // Auto-save functionality can be added here
@@ -917,6 +1004,11 @@ const GraphicNovelBuilder = () => {
                     <Monitor className="h-4 w-4 mr-1" />
                     Fit View
                   </Button>
+                  <SavePageModal
+                    pageElement={pageRef.current}
+                    pageData={pages[selectedPage]}
+                    onSave={handleSavePage}
+                  />
                   <Button onClick={exportCanvas} size="sm" variant="outline">
                     <Download className="h-4 w-4 mr-1" />
                     Export
@@ -1078,14 +1170,47 @@ const GraphicNovelBuilder = () => {
 
             <TabsContent value="gallery" className="space-y-4">
               <div>
-                <h2 className="text-lg font-semibold">Image Gallery</h2>
-                <p className="text-sm text-muted-foreground">Browse and reuse your images</p>
+                <h2 className="text-lg font-semibold">Gallery</h2>
+                <p className="text-sm text-muted-foreground">Browse images and saved pages</p>
               </div>
-              <div className="max-h-96 overflow-y-auto">
-                <Gallery
-                  images={generatedImages}
-                  characters={characters}
-                />
+              
+              <div className="space-y-4">
+                {/* Saved Pages Section */}
+                {savedPages.length > 0 && (
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-medium">Saved Pages ({savedPages.length})</h3>
+                    <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
+                      {savedPages.map((page) => (
+                        <div key={page.id} className="group relative">
+                          <div className="aspect-[0.707] rounded border border-border overflow-hidden bg-muted">
+                            <img
+                              src={page.imageUrl}
+                              alt={page.title}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <div className="absolute bottom-0 left-0 right-0 bg-black/75 text-white text-xs p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="font-medium truncate">{page.title}</div>
+                            {page.description && (
+                              <div className="text-muted-foreground truncate">{page.description}</div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Images Section */}
+                <div className="space-y-2">
+                  <h3 className="text-sm font-medium">Generated Images ({generatedImages.length})</h3>
+                  <div className="max-h-48 overflow-y-auto">
+                    <Gallery
+                      images={generatedImages}
+                      characters={characters}
+                    />
+                  </div>
+                </div>
               </div>
             </TabsContent>
           </Tabs>
@@ -1109,6 +1234,7 @@ const GraphicNovelBuilder = () => {
           {[currentLeft, currentRight].filter(Boolean).map((pageRoot, idx) => (
               <div 
               key={idx} 
+              ref={selectedPage === (spreadIndex + idx) ? pageRef : undefined}
               className="relative" 
               style={{ 
                 width: pageWidth, 
@@ -1307,12 +1433,26 @@ const LeafView: React.FC<LeafViewProps> = ({ node, outline, isSelected, onSelect
           className="h-full w-full flex items-start"
           style={{
             fontSize: textProps.fontSize,
-            color: textProps.color,
-            fontWeight: textProps.fontWeight,
+            color: textProps.textGradient || textProps.color,
+            fontWeight: textProps.fontWeight100 || textProps.fontWeight,
             textAlign: textProps.textAlign,
             fontFamily: textProps.fontFamily,
             lineHeight: textProps.lineHeight,
             letterSpacing: textProps.letterSpacing,
+            fontStyle: textProps.italic ? 'italic' : 'normal',
+            textDecoration: [
+              textProps.underline && 'underline',
+              textProps.strikethrough && 'line-through'
+            ].filter(Boolean).join(' ') || 'none',
+            textShadow: textProps.textShadow !== 'none' ? textProps.textShadow : undefined,
+            textTransform: textProps.textTransform,
+            wordSpacing: textProps.wordSpacing,
+            background: textProps.textBackground !== 'transparent' ? 
+              `${textProps.textBackground}${Math.round(textProps.textBackgroundOpacity * 255).toString(16).padStart(2, '0')}` : 
+              undefined,
+            backgroundImage: textProps.textGradient ? textProps.textGradient : undefined,
+            WebkitBackgroundClip: textProps.textGradient ? 'text' : undefined,
+            WebkitTextFillColor: textProps.textGradient ? 'transparent' : undefined,
           }}
         >
           <div className="whitespace-pre-wrap break-words">
@@ -1476,10 +1616,113 @@ const EnhancedLeafInspector: React.FC<EnhancedLeafInspectorProps> = ({
                 />
               </div>
               
-              <Button onClick={onGenerateText} size="sm" variant="outline" className="w-full">
-                <Sparkles className="h-4 w-4 mr-2" />
-                Generate Story Text
-              </Button>
+              {/* AI Text Generation Settings */}
+              <div className="space-y-3 border border-border rounded-lg p-3">
+                <Label className="text-sm font-medium">AI Text Generation</Label>
+                
+                <div className="space-y-2">
+                  <Label className="text-xs">Generation Prompt</Label>
+                  <Textarea
+                    value={aiPrompt}
+                    onChange={(e) => setAiPrompt(e.target.value)}
+                    rows={2}
+                    placeholder="Describe what text you want to generate..."
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-2">
+                    <Label className="text-xs">Style</Label>
+                    <Select value="narration" onValueChange={() => {}}>
+                      <SelectTrigger className="h-8">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="dialogue">Dialogue</SelectItem>
+                        <SelectItem value="narration">Narration</SelectItem>
+                        <SelectItem value="description">Description</SelectItem>
+                        <SelectItem value="action">Action</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label className="text-xs">Tone</Label>
+                    <Select value="dramatic" onValueChange={() => {}}>
+                      <SelectTrigger className="h-8">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="dramatic">Dramatic</SelectItem>
+                        <SelectItem value="humorous">Humorous</SelectItem>
+                        <SelectItem value="mysterious">Mysterious</SelectItem>
+                        <SelectItem value="romantic">Romantic</SelectItem>
+                        <SelectItem value="dark">Dark</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label className="text-xs">Length</Label>
+                  <Select value="medium" onValueChange={() => {}}>
+                    <SelectTrigger className="h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="short">Short (1-2 sentences)</SelectItem>
+                      <SelectItem value="medium">Medium (2-4 sentences)</SelectItem>
+                      <SelectItem value="long">Long (4-6 sentences)</SelectItem>
+                    </SelectContent>
+                    </Select>
+                      <SelectTrigger className="h-8">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="dialogue">Dialogue</SelectItem>
+                        <SelectItem value="narration">Narration</SelectItem>
+                        <SelectItem value="description">Description</SelectItem>
+                        <SelectItem value="action">Action</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label className="text-xs">Tone</Label>
+                    <Select value={textGenerationTone} onValueChange={(value: any) => setTextGenerationTone(value)}>
+                      <SelectTrigger className="h-8">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="dramatic">Dramatic</SelectItem>
+                        <SelectItem value="humorous">Humorous</SelectItem>
+                        <SelectItem value="mysterious">Mysterious</SelectItem>
+                        <SelectItem value="romantic">Romantic</SelectItem>
+                        <SelectItem value="dark">Dark</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label className="text-xs">Length</Label>
+                  <Select value={textGenerationLength} onValueChange={(value: any) => setTextGenerationLength(value)}>
+                    <SelectTrigger className="h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="short">Short (1-2 sentences)</SelectItem>
+                      <SelectItem value="medium">Medium (2-4 sentences)</SelectItem>
+                      <SelectItem value="long">Long (4-6 sentences)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <Button onClick={onGenerateText} size="sm" variant="outline" className="w-full">
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Generate Story Text
+                </Button>
+              </div>
             </div>
           )}
 
@@ -1805,44 +2048,93 @@ const EnhancedLeafInspector: React.FC<EnhancedLeafInspectorProps> = ({
                   <SelectItem value="'Courier New', monospace">Courier New</SelectItem>
                   <SelectItem value="Helvetica, sans-serif">Helvetica</SelectItem>
                   <SelectItem value="Verdana, sans-serif">Verdana</SelectItem>
+                  <SelectItem value="'Comic Sans MS', cursive">Comic Sans MS</SelectItem>
+                  <SelectItem value="'Roboto', sans-serif">Roboto</SelectItem>
+                  <SelectItem value="'Open Sans', sans-serif">Open Sans</SelectItem>
+                  <SelectItem value="'Playfair Display', serif">Playfair Display</SelectItem>
+                  <SelectItem value="'Montserrat', sans-serif">Montserrat</SelectItem>
+                  <SelectItem value="'Oswald', sans-serif">Oswald</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label>Text Alignment</Label>
-              <Select
-                value={node.textProps.textAlign}
-                onValueChange={(value: "left" | "center" | "right") => 
-                  onChange(n => n.kind === "leaf" ? ({
-                    ...n,
-                    textProps: { ...n.textProps, textAlign: value }
-                  }) : n)
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="left">Left</SelectItem>
-                  <SelectItem value="center">Center</SelectItem>
-                  <SelectItem value="right">Right</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <Switch
-                  checked={node.textProps.fontWeight === "bold"}
-                  onCheckedChange={(checked) => 
+              <div className="space-y-2">
+                <Label>Text Alignment</Label>
+                <Select
+                  value={node.textProps.textAlign}
+                  onValueChange={(value: "left" | "center" | "right" | "justify") => 
                     onChange(n => n.kind === "leaf" ? ({
                       ...n,
-                      textProps: { ...n.textProps, fontWeight: checked ? "bold" : "normal" }
+                      textProps: { ...n.textProps, textAlign: value }
                     }) : n)
                   }
-                />
-                <Label>Bold</Label>
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="left">Left</SelectItem>
+                    <SelectItem value="center">Center</SelectItem>
+                    <SelectItem value="right">Right</SelectItem>
+                    <SelectItem value="justify">Justify</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+            {/* Text Style Toggles */}
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    checked={node.textProps.fontWeight === "bold"}
+                    onCheckedChange={(checked) => 
+                      onChange(n => n.kind === "leaf" ? ({
+                        ...n,
+                        textProps: { ...n.textProps, fontWeight: checked ? "bold" : "normal" }
+                      }) : n)
+                    }
+                  />
+                  <Label className="text-xs">Bold</Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    checked={node.textProps.italic}
+                    onCheckedChange={(checked) => 
+                      onChange(n => n.kind === "leaf" ? ({
+                        ...n,
+                        textProps: { ...n.textProps, italic: checked }
+                      }) : n)
+                    }
+                  />
+                  <Label className="text-xs">Italic</Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    checked={node.textProps.underline}
+                    onCheckedChange={(checked) => 
+                      onChange(n => n.kind === "leaf" ? ({
+                        ...n,
+                        textProps: { ...n.textProps, underline: checked }
+                      }) : n)
+                    }
+                  />
+                  <Label className="text-xs">Underline</Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    checked={node.textProps.strikethrough}
+                    onCheckedChange={(checked) => 
+                      onChange(n => n.kind === "leaf" ? ({
+                        ...n,
+                        textProps: { ...n.textProps, strikethrough: checked }
+                      }) : n)
+                    }
+                  />
+                  <Label className="text-xs">Strike</Label>
+                </div>
               </div>
             </div>
 
@@ -1877,6 +2169,149 @@ const EnhancedLeafInspector: React.FC<EnhancedLeafInspectorProps> = ({
               />
               <div className="text-xs text-muted-foreground text-center">
                 {node.textProps.letterSpacing}px
+              </div>
+            </div>
+
+            {/* Enhanced Text Effects */}
+            <div className="space-y-3 border border-border rounded-lg p-3">
+              <Label className="text-sm font-medium">Text Effects</Label>
+              
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label className="text-xs">Font Weight</Label>
+                  <Slider
+                    value={[node.textProps.fontWeight100]}
+                    onValueChange={([value]) => 
+                      onChange(n => n.kind === "leaf" ? ({
+                        ...n,
+                        textProps: { ...n.textProps, fontWeight100: value }
+                      }) : n)
+                    }
+                    min={100}
+                    max={900}
+                    step={100}
+                    className="w-full"
+                  />
+                  <div className="text-xs text-muted-foreground text-center">
+                    {node.textProps.fontWeight100}
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label className="text-xs">Word Spacing</Label>
+                  <Slider
+                    value={[node.textProps.wordSpacing]}
+                    onValueChange={([value]) => 
+                      onChange(n => n.kind === "leaf" ? ({
+                        ...n,
+                        textProps: { ...n.textProps, wordSpacing: value }
+                      }) : n)
+                    }
+                    min={-5}
+                    max={10}
+                    step={0.5}
+                    className="w-full"
+                  />
+                  <div className="text-xs text-muted-foreground text-center">
+                    {node.textProps.wordSpacing}px
+                  </div>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label className="text-xs">Text Transform</Label>
+                <Select
+                  value={node.textProps.textTransform}
+                  onValueChange={(value: "none" | "uppercase" | "lowercase" | "capitalize") => 
+                    onChange(n => n.kind === "leaf" ? ({
+                      ...n,
+                      textProps: { ...n.textProps, textTransform: value }
+                    }) : n)
+                  }
+                >
+                  <SelectTrigger className="h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    <SelectItem value="uppercase">UPPERCASE</SelectItem>
+                    <SelectItem value="lowercase">lowercase</SelectItem>
+                    <SelectItem value="capitalize">Capitalize Each Word</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label className="text-xs">Text Shadow</Label>
+                <Select
+                  value={node.textProps.textShadow}
+                  onValueChange={(value: string) => 
+                    onChange(n => n.kind === "leaf" ? ({
+                      ...n,
+                      textProps: { ...n.textProps, textShadow: value }
+                    }) : n)
+                  }
+                >
+                  <SelectTrigger className="h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    <SelectItem value="1px 1px 2px rgba(0,0,0,0.5)">Light Shadow</SelectItem>
+                    <SelectItem value="2px 2px 4px rgba(0,0,0,0.7)">Medium Shadow</SelectItem>
+                    <SelectItem value="3px 3px 6px rgba(0,0,0,0.8)">Heavy Shadow</SelectItem>
+                    <SelectItem value="0 0 10px rgba(255,255,255,0.8)">White Glow</SelectItem>
+                    <SelectItem value="0 0 10px rgba(0,0,255,0.8)">Blue Glow</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label className="text-xs">Text Background</Label>
+                <div className="flex gap-2">
+                  <Input
+                    type="color"
+                    value={node.textProps.textBackground === 'transparent' ? '#ffffff' : node.textProps.textBackground}
+                    onChange={(e) => 
+                      onChange(n => n.kind === "leaf" ? ({
+                        ...n,
+                        textProps: { ...n.textProps, textBackground: e.target.value }
+                      }) : n)
+                    }
+                    className="w-16 h-8"
+                  />
+                  <Slider
+                    value={[node.textProps.textBackgroundOpacity]}
+                    onValueChange={([value]) => 
+                      onChange(n => n.kind === "leaf" ? ({
+                        ...n,
+                        textProps: { ...n.textProps, textBackgroundOpacity: value }
+                      }) : n)
+                    }
+                    min={0}
+                    max={1}
+                    step={0.1}
+                    className="flex-1"
+                  />
+                </div>
+                <div className="text-xs text-muted-foreground text-center">
+                  Opacity: {Math.round(node.textProps.textBackgroundOpacity * 100)}%
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label className="text-xs">Text Gradient (CSS)</Label>
+                <Input
+                  value={node.textProps.textGradient}
+                  onChange={(e) => 
+                    onChange(n => n.kind === "leaf" ? ({
+                      ...n,
+                      textProps: { ...n.textProps, textGradient: e.target.value }
+                    }) : n)
+                  }
+                  placeholder="linear-gradient(45deg, #ff0000, #0000ff)"
+                  className="text-xs"
+                />
               </div>
             </div>
           </CardContent>

@@ -6,6 +6,16 @@ export interface Character {
   createdAt: Date;
 }
 
+export interface SavedPage {
+  id: string;
+  title: string;
+  description?: string;
+  imageUrl: string;
+  pageData: any; // Store the page structure
+  createdAt: Date;
+  userId?: string;
+}
+
 export interface GeneratedImage {
   id: string;
   characterId?: string;
