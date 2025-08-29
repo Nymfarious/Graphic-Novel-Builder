@@ -9,20 +9,17 @@ import { Gallery } from '@/components/Gallery';
 import { BatchGenerator } from '@/components/BatchGenerator';
 import { ImageHistory } from '@/components/ImageHistory';
 import UserMenu from '@/components/UserMenu';
-
 import { Character, GeneratedImage, GenerationJob } from '@/types';
 import { ReplicateService } from '@/services/replicate';
 import { GenerationQueue } from '@/components/GenerationQueue';
 import { toast } from 'sonner';
 import heroImage from '@/assets/hero-image.jpg';
-
 const Index = () => {
   const [characters, setCharacters] = useState<Character[]>([]);
   const [generatedImages, setGeneratedImages] = useState<GeneratedImage[]>([]);
   const [generationJobs, setGenerationJobs] = useState<GenerationJob[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const replicateService = useRef<ReplicateService>(new ReplicateService());
-
   const addCharacter = useCallback((characterData: Omit<Character, 'id' | 'createdAt'>) => {
     const newCharacter: Character = {
       ...characterData,
@@ -32,20 +29,15 @@ const Index = () => {
     setCharacters(prev => [...prev, newCharacter]);
     toast.success(`Character "${newCharacter.name}" created successfully!`);
   }, []);
-
   const deleteCharacter = useCallback((id: string) => {
     setCharacters(prev => prev.filter(c => c.id !== id));
     toast.success('Character deleted successfully!');
   }, []);
-
-
   const handleGenerate = useCallback(async (jobData: Omit<GenerationJob, 'id' | 'createdAt' | 'status'>) => {
-
     setIsGenerating(true);
-    
     const character = jobData.characterId ? characters.find(c => c.id === jobData.characterId) : undefined;
     const jobId = crypto.randomUUID();
-    
+
     // Create generation job
     const generationJob: GenerationJob = {
       id: jobId,
@@ -69,7 +61,8 @@ const Index = () => {
       characterName: character?.name,
       prompt: jobData.prompt,
       seed: jobData.seed,
-      imageUrl: '', // Will be filled when generation completes
+      imageUrl: '',
+      // Will be filled when generation completes
       useReference: jobData.useReference,
       referenceImageUrl: jobData.referenceImageUrl,
       aspectRatio: jobData.aspectRatio,
@@ -79,15 +72,14 @@ const Index = () => {
       status: 'generating',
       createdAt: new Date()
     };
-
     setGenerationJobs(prev => [generationJob, ...prev]);
     setGeneratedImages(prev => [generatedImage, ...prev]);
-
     try {
       // Update job status to generating
-      setGenerationJobs(prev => 
-        prev.map(job => job.id === jobId ? { ...job, status: 'generating' as const } : job)
-      );
+      setGenerationJobs(prev => prev.map(job => job.id === jobId ? {
+        ...job,
+        status: 'generating' as const
+      } : job));
 
       // Call Replicate API with proper parameters
       const result = await replicateService.current!.generateImage({
@@ -108,43 +100,29 @@ const Index = () => {
         predictionId: result.predictionId,
         status: 'completed'
       };
-      
-      setGeneratedImages(prev => 
-        prev.map(img => img.id === generatedImage.id ? completedImage : img)
-      );
-
-      setGenerationJobs(prev => 
-        prev.map(job => job.id === jobId ? { 
-          ...job, 
-          status: 'completed' as const, 
-          imageUrl: result.imageURL,
-          predictionId: result.predictionId 
-        } : job)
-      );
-      
+      setGeneratedImages(prev => prev.map(img => img.id === generatedImage.id ? completedImage : img));
+      setGenerationJobs(prev => prev.map(job => job.id === jobId ? {
+        ...job,
+        status: 'completed' as const,
+        imageUrl: result.imageURL,
+        predictionId: result.predictionId
+      } : job));
       setIsGenerating(false);
-      
     } catch (error) {
       console.error('Generation error:', error);
-      
-      // Handle generation failure
-      setGeneratedImages(prev => 
-        prev.map(img => 
-          img.id === generatedImage.id 
-            ? { ...img, status: 'failed' as const }
-            : img
-        )
-      );
 
-      setGenerationJobs(prev => 
-        prev.map(job => job.id === jobId ? { ...job, status: 'failed' as const } : job)
-      );
-      
+      // Handle generation failure
+      setGeneratedImages(prev => prev.map(img => img.id === generatedImage.id ? {
+        ...img,
+        status: 'failed' as const
+      } : img));
+      setGenerationJobs(prev => prev.map(job => job.id === jobId ? {
+        ...job,
+        status: 'failed' as const
+      } : job));
       setIsGenerating(false);
     }
   }, [characters]);
-
-
   const handleCancelJob = useCallback(async (jobId: string) => {
     const job = generationJobs.find(j => j.id === jobId);
     if (job?.predictionId) {
@@ -154,39 +132,29 @@ const Index = () => {
         console.error('Cancel error:', error);
       }
     }
-    
-    setGenerationJobs(prev => 
-      prev.map(j => j.id === jobId ? { ...j, status: 'canceled' as const } : j)
-    );
-    
-    setGeneratedImages(prev => 
-      prev.map(img => 
-        img.id === jobId ? { ...img, status: 'canceled' as const } : img
-      )
-    );
+    setGenerationJobs(prev => prev.map(j => j.id === jobId ? {
+      ...j,
+      status: 'canceled' as const
+    } : j));
+    setGeneratedImages(prev => prev.map(img => img.id === jobId ? {
+      ...img,
+      status: 'canceled' as const
+    } : img));
   }, [generationJobs]);
-
   const handleRetryJob = useCallback((jobId: string) => {
     const job = generationJobs.find(j => j.id === jobId);
     if (job) {
       handleGenerate(job);
     }
   }, [generationJobs, handleGenerate]);
-
   const handleRemoveJob = useCallback((jobId: string) => {
     setGenerationJobs(prev => prev.filter(j => j.id !== jobId));
   }, []);
-
-  return (
-    <div className="min-h-screen bg-gradient-hero">
+  return <div className="min-h-screen bg-gradient-hero">
       {/* Hero Section */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0">
-          <img 
-            src={heroImage} 
-            alt="AI Character Creation" 
-            className="w-full h-full object-cover opacity-30"
-          />
+          <img src={heroImage} alt="AI Character Creation" className="w-full h-full object-cover opacity-30" />
           <div className="absolute inset-0 bg-gradient-hero opacity-80" />
         </div>
         
@@ -216,46 +184,10 @@ const Index = () => {
                   📚 Try Graphic Novel Builder
                 </a>
               </Button>
-              <Button variant="outline" size="lg" className="text-lg px-8">
-                <Github className="h-5 w-5" />
-                View Documentation
-                <ExternalLink className="h-4 w-4" />
-              </Button>
+              
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-16">
-              <Card className="bg-card/50 backdrop-blur-sm border-border shadow-elegant">
-                <CardContent className="p-6 text-center">
-                  <Users className="h-12 w-12 text-primary mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-foreground mb-2">Character Management</h3>
-                  <p className="text-muted-foreground">Create and organize characters with reference images</p>
-                </CardContent>
-              </Card>
-              
-              <Card className="bg-card/50 backdrop-blur-sm border-border shadow-elegant">
-                <CardContent className="p-6 text-center">
-                  <Wand2 className="h-12 w-12 text-primary mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-foreground mb-2">AI Generation</h3>
-                  <p className="text-muted-foreground">Generate single images with multiple reference support</p>
-                </CardContent>
-              </Card>
-              
-              <Card className="bg-card/50 backdrop-blur-sm border-border shadow-elegant">
-                <CardContent className="p-6 text-center">
-                  <Zap className="h-12 w-12 text-primary mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-foreground mb-2">Batch Generation</h3>
-                  <p className="text-muted-foreground">Create multiple variations from different prompts</p>
-                </CardContent>
-              </Card>
-              
-              <Card className="bg-card/50 backdrop-blur-sm border-border shadow-elegant">
-                <CardContent className="p-6 text-center">
-                  <Images className="h-12 w-12 text-primary mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-foreground mb-2">Gallery & History</h3>
-                  <p className="text-muted-foreground">Browse, organize and download your artwork</p>
-                </CardContent>
-              </Card>
-            </div>
+            
           </div>
         </div>
       </section>
@@ -289,20 +221,12 @@ const Index = () => {
           </div>
 
           <TabsContent value="characters" className="space-y-6">
-            <CharacterManager
-              characters={characters}
-              onAddCharacter={addCharacter}
-              onDeleteCharacter={deleteCharacter}
-            />
+            <CharacterManager characters={characters} onAddCharacter={addCharacter} onDeleteCharacter={deleteCharacter} />
           </TabsContent>
 
           <TabsContent value="generate" className="space-y-6">
             <div className="grid lg:grid-cols-2 gap-6">
-              <ImageGenerator
-                characters={characters}
-                onGenerate={handleGenerate}
-                isGenerating={isGenerating}
-              />
+              <ImageGenerator characters={characters} onGenerate={handleGenerate} isGenerating={isGenerating} />
               <div className="space-y-6">
                 <div>
                   <h2 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
@@ -310,36 +234,21 @@ const Index = () => {
                   </h2>
                   <p className="text-muted-foreground">Track your image generation progress</p>
                 </div>
-                <GenerationQueue
-                  jobs={generationJobs}
-                  onCancelJob={handleCancelJob}
-                  onRetryJob={handleRetryJob}
-                  onRemoveJob={handleRemoveJob}
-                />
+                <GenerationQueue jobs={generationJobs} onCancelJob={handleCancelJob} onRetryJob={handleRetryJob} onRemoveJob={handleRemoveJob} />
               </div>
             </div>
           </TabsContent>
 
           <TabsContent value="batch" className="space-y-6">
-            <BatchGenerator
-              characters={characters}
-              onGenerate={handleGenerate}
-              isGenerating={isGenerating}
-            />
+            <BatchGenerator characters={characters} onGenerate={handleGenerate} isGenerating={isGenerating} />
           </TabsContent>
 
           <TabsContent value="history" className="space-y-6">
-            <ImageHistory
-              images={generatedImages}
-              characters={characters}
-            />
+            <ImageHistory images={generatedImages} characters={characters} />
           </TabsContent>
 
           <TabsContent value="gallery" className="space-y-6">
-            <Gallery
-              images={generatedImages}
-              characters={characters}
-            />
+            <Gallery images={generatedImages} characters={characters} />
           </TabsContent>
         </Tabs>
       </section>
@@ -362,8 +271,6 @@ const Index = () => {
         </div>
       </footer>
 
-    </div>
-  );
+    </div>;
 };
-
 export default Index;
