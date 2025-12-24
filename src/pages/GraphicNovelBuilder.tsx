@@ -26,13 +26,20 @@ import { Character, GeneratedImage, GenerationJob, SavedPage } from '@/types';
 import { ReplicateService } from '@/services/replicate';
 import { Node, SplitNode } from '@/types/nodes';
 import { 
-  findNode, 
+  findNode,
+  findParentNode,
   updateNode, 
   applyResize, 
   appendGeneratedLine, 
   storyPrompts,
-  DEFAULT_LEAF 
+  DEFAULT_LEAF,
+  removeNode,
+  replaceNode,
+  duplicateNodeInParent,
+  uid
 } from '@/utils/nodeUtils';
+import { PanelOperationsMenu, splitLeafNode, splitSplitNode } from '@/components/PanelOperationsMenu';
+import { TextFormattingModal } from '@/components/TextFormattingModal';
 import { PAGE_SIZES, PRESETS, getDefaultPreset, PageSizeKey } from '@/constants/pagePresets';
 import { 
   LayoutGrid, 
@@ -332,6 +339,65 @@ const GraphicNovelBuilder = () => {
     if (!selectedId || selectedPage >= pages.length) return null;
     return findNode(pages[selectedPage], selectedId);
   }, [pages, selectedPage, selectedId]);
+
+  const parentNode = useMemo(() => {
+    if (!selectedId || selectedPage >= pages.length) return null;
+    return findParentNode(pages[selectedPage], selectedId);
+  }, [pages, selectedPage, selectedId]);
+
+  // Panel operations
+  const handleSplitPanel = useCallback((direction: 'horizontal' | 'vertical', count: number) => {
+    if (!selectedNode) return;
+    
+    const newNode = selectedNode.kind === 'leaf'
+      ? splitLeafNode(selectedNode, direction, count)
+      : splitSplitNode(selectedNode, direction, count);
+    
+    updatePage(selectedPage, prev => replaceNode(prev, selectedNode.id, newNode) as SplitNode);
+    setSelectedId(newNode.children[0].id);
+    toast.success(`Split into ${count} panels`);
+  }, [selectedNode, selectedPage]);
+
+  const handleMergePanel = useCallback(() => {
+    if (!selectedNode || !parentNode) return;
+    
+    // Get the sibling index and merge with adjacent sibling
+    const siblingIndex = parentNode.children.findIndex(c => c.id === selectedNode.id);
+    if (siblingIndex === -1 || parentNode.children.length <= 1) return;
+    
+    // Remove the selected panel and redistribute sizes
+    updatePage(selectedPage, prev => removeNode(prev, selectedNode.id) as SplitNode);
+    setSelectedId('');
+    toast.success('Panel merged');
+  }, [selectedNode, parentNode, selectedPage]);
+
+  const handleDeletePanel = useCallback(() => {
+    if (!selectedNode || !parentNode || parentNode.children.length <= 1) return;
+    
+    updatePage(selectedPage, prev => removeNode(prev, selectedNode.id) as SplitNode);
+    setSelectedId('');
+    toast.success('Panel deleted');
+  }, [selectedNode, parentNode, selectedPage]);
+
+  const handleDuplicatePanel = useCallback(() => {
+    if (!selectedNode) return;
+    
+    updatePage(selectedPage, prev => duplicateNodeInParent(prev, selectedNode.id) as SplitNode);
+    toast.success('Panel duplicated');
+  }, [selectedNode, selectedPage]);
+
+  // Text formatting handler
+  const handleTextPropsChange = useCallback((updates: Record<string, any>) => {
+    if (!selectedNode || selectedNode.kind !== 'leaf') return;
+    
+    updatePage(selectedPage, prev => updateNode(prev, selectedNode.id, n => {
+      if (n.kind !== 'leaf') return n;
+      return {
+        ...n,
+        textProps: { ...n.textProps, ...updates }
+      };
+    }) as SplitNode);
+  }, [selectedNode, selectedPage]);
 
   const currentLeft = pages[spreadIndex];
   const currentRight = pages[spreadIndex + 1];
@@ -732,6 +798,20 @@ const GraphicNovelBuilder = () => {
                       onLoadProject={handleLoadRecentProject}
                       onDeleteProject={handleDeleteRecentProject}
                     />
+                    <PanelOperationsMenu
+                      selectedNode={selectedNode}
+                      parentNode={parentNode}
+                      onSplitPanel={handleSplitPanel}
+                      onMergePanel={handleMergePanel}
+                      onDeletePanel={handleDeletePanel}
+                      onDuplicatePanel={handleDuplicatePanel}
+                    />
+                    {selectedNode && selectedNode.kind === 'leaf' && selectedNode.contentType === 'text' && (
+                      <TextFormattingModal
+                        textProps={selectedNode.textProps}
+                        onChange={handleTextPropsChange}
+                      />
+                    )}
                   </div>
                   {lastSaved && (
                     <p className="text-xs text-muted-foreground mt-2">
