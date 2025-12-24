@@ -17,6 +17,7 @@ import { CloudProjectManager } from '@/components/CloudProjectManager';
 import UserMenu from '@/components/UserMenu';
 import { EnhancedLeafInspector } from '@/components/EnhancedLeafInspector';
 import { SavePageModal } from '@/components/SavePageModal';
+import { ExportPanel } from '@/components/ExportPanel';
 import { RenderNode, SplitInspector } from '@/components/editor';
 import { Character, GeneratedImage, GenerationJob, SavedPage } from '@/types';
 import { ReplicateService } from '@/services/replicate';
@@ -33,7 +34,6 @@ import { PAGE_SIZES, PRESETS, getDefaultPreset, PageSizeKey } from '@/constants/
 import { 
   LayoutGrid, 
   Plus, 
-  Download, 
   Undo, 
   Redo, 
   ZoomIn, 
@@ -43,8 +43,7 @@ import {
   Monitor,
   Users,
   History,
-  Images,
-  Save
+  Images
 } from 'lucide-react';
 
 const GraphicNovelBuilder = () => {
@@ -158,9 +157,6 @@ const GraphicNovelBuilder = () => {
     toast.success("Fit to viewport");
   }, []);
 
-  const exportCanvas = useCallback(() => {
-    toast.info("Export functionality would be implemented here");
-  }, []);
 
   // Character management functions
   const addCharacter = useCallback((characterData: Omit<Character, 'id' | 'createdAt'>) => {
@@ -582,7 +578,11 @@ const GraphicNovelBuilder = () => {
                       pageData={pages[selectedPage]}
                       onSave={handleSavePage}
                     />
-                    <IconButton onClick={exportCanvas} icon={Download} label="Export" />
+                    <ExportPanel 
+                      pageRef={pageRef} 
+                      pages={pages} 
+                      selectedPage={selectedPage} 
+                    />
                   </div>
                 </div>
 
