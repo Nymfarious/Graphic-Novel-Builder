@@ -4,6 +4,24 @@
 
 import { useEffect, useCallback } from 'react';
 
+// Shortcut definitions for display in Settings page
+export const SHORTCUT_DEFINITIONS = [
+  { keys: ['Ctrl', 'Alt', 'V'], action: 'Toggle Mini DevTools', category: 'DevTools' },
+  { keys: ['Ctrl', 'Z'], action: 'Undo', category: 'Edit' },
+  { keys: ['Ctrl', 'Shift', 'Z'], action: 'Redo', category: 'Edit' },
+  { keys: ['Ctrl', 'Y'], action: 'Redo (Alt)', category: 'Edit' },
+  { keys: ['Ctrl', 'S'], action: 'Save', category: 'File' },
+  { keys: ['Ctrl', '+'], action: 'Zoom In', category: 'View' },
+  { keys: ['Ctrl', '-'], action: 'Zoom Out', category: 'View' },
+  { keys: ['Ctrl', '0'], action: 'Fit to View', category: 'View' },
+  { keys: ['Ctrl', 'D'], action: 'Duplicate', category: 'Edit' },
+  { keys: ['Delete'], action: 'Delete Selected', category: 'Edit' },
+  { keys: ['Backspace'], action: 'Delete Selected', category: 'Edit' },
+  { keys: ['Escape'], action: 'Deselect / Close', category: 'General' },
+  { keys: ['Ctrl', 'Scroll'], action: 'Zoom In/Out', category: 'View' },
+  { keys: ['Shift', 'Scroll'], action: 'Horizontal Scroll', category: 'View' },
+] as const;
+
 export interface KeyboardShortcutHandlers {
   onUndo?: () => void;
   onRedo?: () => void;
@@ -143,41 +161,5 @@ export function useScrollZoom(
   }, [containerRef, onZoom, enabled]);
 }
 
-// Hook for tracking Mini DevTools visibility
-export function useMiniDevToolsVisibility(initialVisible: boolean = false) {
-  const [visible, setVisible] = useState(initialVisible);
-
-  const toggle = useCallback(() => {
-    setVisible(prev => !prev);
-  }, []);
-
-  const show = useCallback(() => setVisible(true), []);
-  const hide = useCallback(() => setVisible(false), []);
-
-  return { visible, toggle, show, hide };
-}
-
-// Need to import useState for the last hook
-import { useState } from 'react';
-
-/* 
-KEYBOARD SHORTCUTS REFERENCE:
-============================
-CTRL + Alt + V     → Toggle Mini DevTools (wrench icon)
-CTRL/CMD + Z       → Undo
-CTRL/CMD + Shift+Z → Redo
-CTRL/CMD + Y       → Redo (alternative)
-CTRL/CMD + S       → Save
-CTRL/CMD + =       → Zoom In
-CTRL/CMD + -       → Zoom Out
-CTRL/CMD + 0       → Fit to View
-CTRL/CMD + D       → Duplicate
-Delete/Backspace   → Delete selected
-Escape             → Deselect / Close modal
-
-SCROLL BEHAVIORS:
-=================
-CTRL + Scroll      → Zoom in/out
-Shift + Scroll     → Horizontal scroll (side to side)
-Regular Scroll     → Vertical scroll
-*/
+// Default export for convenience
+export default useKeyboardShortcuts;
