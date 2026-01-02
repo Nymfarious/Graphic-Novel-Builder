@@ -1,0 +1,412 @@
+/* MeKu Storybook Builder - Story Animations */
+/* Phase 1: CSS animations for text, images, and tap reactions */
+
+/* ============================================================================
+   BASE ANIMATION CLASSES
+   ============================================================================ */
+
+.story-element {
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+.story-element.visible {
+  opacity: 1;
+}
+
+/* ============================================================================
+   ENTRANCE ANIMATIONS
+   ============================================================================ */
+
+.animate-fadeIn {
+  animation: storyFadeIn var(--animation-duration, 0.5s) ease-out forwards;
+}
+
+.animate-fadeOut {
+  animation: storyFadeOut var(--animation-duration, 0.5s) ease-out forwards;
+}
+
+.animate-slideUp {
+  animation: storySlideUp var(--animation-duration, 0.5s) ease-out forwards;
+}
+
+.animate-slideDown {
+  animation: storySlideDown var(--animation-duration, 0.5s) ease-out forwards;
+}
+
+.animate-slideLeft {
+  animation: storySlideLeft var(--animation-duration, 0.5s) ease-out forwards;
+}
+
+.animate-slideRight {
+  animation: storySlideRight var(--animation-duration, 0.5s) ease-out forwards;
+}
+
+.animate-bounce {
+  animation: storyBounce var(--animation-duration, 0.6s) ease-out forwards;
+}
+
+.animate-pop {
+  animation: storyPop var(--animation-duration, 0.3s) ease-out forwards;
+}
+
+.animate-typewriter {
+  overflow: hidden;
+  white-space: nowrap;
+  border-right: 2px solid currentColor;
+  animation: 
+    storyTypewriter var(--animation-duration, 2s) steps(40) forwards,
+    storyBlink 0.75s step-end infinite;
+}
+
+/* ============================================================================
+   CONTINUOUS ANIMATIONS (for ambient effects)
+   ============================================================================ */
+
+.animate-float {
+  animation: storyFloat 3s ease-in-out infinite;
+}
+
+.animate-wiggle {
+  animation: storyWiggle 0.5s ease-in-out;
+}
+
+.animate-spin {
+  animation: storySpin 0.5s ease-out;
+}
+
+.animate-pulse {
+  animation: storyPulse 2s ease-in-out infinite;
+}
+
+/* ============================================================================
+   TAP REACTION ANIMATIONS
+   ============================================================================ */
+
+.tap-reaction-pop {
+  animation: storyPop 0.3s ease-out;
+}
+
+.tap-reaction-wiggle {
+  animation: storyWiggle 0.4s ease-in-out;
+}
+
+.tap-reaction-bounce {
+  animation: storyTapBounce 0.4s ease-out;
+}
+
+.tap-reaction-spin {
+  animation: storySpin 0.5s ease-out;
+}
+
+/* ============================================================================
+   PARTICLE EFFECTS (using pseudo-elements)
+   ============================================================================ */
+
+.particle-container {
+  position: absolute;
+  pointer-events: none;
+  z-index: 100;
+}
+
+.sparkle-particle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: gold;
+  border-radius: 50%;
+  animation: sparkleFloat 1s ease-out forwards;
+}
+
+.heart-particle {
+  position: absolute;
+  font-size: 20px;
+  animation: heartFloat 1s ease-out forwards;
+}
+
+.star-particle {
+  position: absolute;
+  font-size: 16px;
+  animation: starFloat 1s ease-out forwards;
+}
+
+/* ============================================================================
+   KEYFRAMES
+   ============================================================================ */
+
+@keyframes storyFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes storyFadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes storySlideUp {
+  from { 
+    opacity: 0; 
+    transform: translateY(30px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
+@keyframes storySlideDown {
+  from { 
+    opacity: 0; 
+    transform: translateY(-30px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
+@keyframes storySlideLeft {
+  from { 
+    opacity: 0; 
+    transform: translateX(30px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateX(0); 
+  }
+}
+
+@keyframes storySlideRight {
+  from { 
+    opacity: 0; 
+    transform: translateX(-30px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateX(0); 
+  }
+}
+
+@keyframes storyBounce {
+  0% { 
+    opacity: 0;
+    transform: scale(0.3) translateY(50px); 
+  }
+  50% { 
+    opacity: 1;
+    transform: scale(1.05) translateY(-10px); 
+  }
+  70% { 
+    transform: scale(0.95) translateY(5px); 
+  }
+  100% { 
+    transform: scale(1) translateY(0); 
+  }
+}
+
+@keyframes storyPop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
+@keyframes storyFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes storyWiggle {
+  0%, 100% { transform: rotate(0deg); }
+  20% { transform: rotate(-8deg); }
+  40% { transform: rotate(8deg); }
+  60% { transform: rotate(-5deg); }
+  80% { transform: rotate(5deg); }
+}
+
+@keyframes storySpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes storyPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes storyTapBounce {
+  0%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-15px); }
+  50% { transform: translateY(-10px); }
+  70% { transform: translateY(-5px); }
+}
+
+@keyframes storyTypewriter {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+@keyframes storyBlink {
+  from, to { border-color: transparent; }
+  50% { border-color: currentColor; }
+}
+
+/* Particle animations */
+@keyframes sparkleFloat {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--x, 20px), var(--y, -40px)) scale(0);
+  }
+}
+
+@keyframes heartFloat {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) scale(0.5);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(var(--x, 10px), -30px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--x, 20px), -60px) scale(0.8);
+  }
+}
+
+@keyframes starFloat {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) rotate(0deg) scale(0.5);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--x, 15px), var(--y, -50px)) rotate(180deg) scale(1);
+  }
+}
+
+/* ============================================================================
+   STORY PAGE CONTAINER
+   ============================================================================ */
+
+.story-page-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-size: cover;
+  background-position: center;
+}
+
+.story-canvas {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+/* ============================================================================
+   TAPPABLE ELEMENTS
+   ============================================================================ */
+
+.tappable-element {
+  cursor: pointer;
+  transition: transform 0.1s ease-out;
+}
+
+.tappable-element:hover {
+  transform: scale(1.02);
+}
+
+.tappable-element:active {
+  transform: scale(0.98);
+}
+
+/* Editor mode - show hotspot outlines */
+.tappable-hotspot-editor {
+  position: absolute;
+  border: 2px dashed rgba(99, 102, 241, 0.5);
+  background: rgba(99, 102, 241, 0.1);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.tappable-hotspot-editor:hover {
+  background: rgba(99, 102, 241, 0.2);
+  border-color: rgba(99, 102, 241, 0.8);
+}
+
+/* Reader mode - invisible hitbox */
+.tappable-hotspot-reader {
+  position: absolute;
+  cursor: pointer;
+}
+
+/* ============================================================================
+   READER MODE CONTROLS
+   ============================================================================ */
+
+.reader-controls {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 1rem 2rem;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  z-index: 50;
+}
+
+.reader-button {
+  padding: 1rem 2rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  border-radius: 9999px;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s, background-color 0.2s;
+}
+
+.reader-button:hover {
+  transform: scale(1.05);
+}
+
+.reader-button:active {
+  transform: scale(0.95);
+}
+
+.reader-button-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.reader-button-secondary {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  backdrop-filter: blur(4px);
+}
+
+/* ============================================================================
+   PROGRESS BAR
+   ============================================================================ */
+
+.story-progress-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  z-index: 50;
+}
+
+.story-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #667eea, #764ba2);
+  transition: width 0.1s linear;
+}

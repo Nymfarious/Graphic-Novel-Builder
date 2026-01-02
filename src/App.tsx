@@ -16,6 +16,7 @@ import Settings from "./pages/Settings";
 import Props from "./pages/Props";
 import SavedPages from "./pages/SavedPages";
 import Storybook from "./pages/Storybook";
+import StoryDemo from "./pages/StoryDemo";
 import { MiniDevTools } from '@/components/MiniDevTools';
 import About from '@/pages/About';
 
@@ -77,6 +78,11 @@ const App = () => (
                 <Layout>
                   <Storybook />
                 </Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/story-demo" element={
+              <ProtectedRoute>
+                <StoryDemo />
               </ProtectedRoute>
             } />
             <Route path="*" element={<NotFound />} />
