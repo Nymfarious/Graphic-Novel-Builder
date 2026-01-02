@@ -27,7 +27,7 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter basename="/Storybook-Builder">
+        <BrowserRouter basename="/MeKu-Storybook-Builder">
           <Routes>
             <Route path="/auth" element={<Auth />} />
             <Route path="/" element={
